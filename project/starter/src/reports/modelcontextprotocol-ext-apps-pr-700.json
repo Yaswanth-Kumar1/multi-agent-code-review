@@ -1,0 +1,594 @@
+{
+  "pullRequest": {
+    "owner": "modelcontextprotocol",
+    "repo": "ext-apps",
+    "number": 700
+  },
+  "fileReviews": [
+    {
+      "file": "src/spec.types.ts",
+      "codeQuality": {
+        "file": "src/spec.types.ts",
+        "issues": [
+          {
+            "line": 0,
+            "severity": "medium",
+            "category": "maintainability",
+            "description": "Generated Zod schemas from TypeScript types can lead to drift if regeneration is not automated in the build process",
+            "suggestion": "Ensure package.json includes a pre-commit or pre-build hook to regenerate schemas automatically. Add a CI check that fails if generated files are out of sync"
+          },
+          {
+            "line": 0,
+            "severity": "low",
+            "category": "best-practice",
+            "description": "The contentMimeTypes?: string[] allows any string array. While flexible, this could permit invalid MIME types",
+            "suggestion": "Consider using a branded type or runtime validation for MIME type format, or at minimum document the expected format in JSDoc comments"
+          },
+          {
+            "line": 0,
+            "severity": "info",
+            "category": "security",
+            "description": "The wildcard [\"*\"] for opaque-forwarding in McpUiClientCapabilities.contentMimeTypes could lead to unexpected security implications if not properly documented",
+            "suggestion": "Add explicit security warnings in the type documentation about validating forwarded content and the implications of using [\"*\"]"
+          }
+        ],
+        "overallScore": 85,
+        "summary": "Type definitions are well-structured with Zod schema generation. Main concerns are automated schema regeneration checks and MIME type validation documentation."
+      },
+      "testCoverage": {
+        "file": "src/spec.types.ts",
+        "hasTests": true,
+        "testFiles": [
+          "Schema round-trip tests in generated tests",
+          "Type validation via TypeScript compilation"
+        ],
+        "untestedPaths": [],
+        "coverageEstimate": 95,
+        "summary": "Type definitions are validated through Zod schema generation and round-trip tests. TypeScript compiler provides compile-time validation."
+      },
+      "refactorings": {
+        "file": "src/spec.types.ts",
+        "suggestions": [
+          {
+            "type": "simplify",
+            "location": "Type definitions for McpUiResourceMeta and McpUiClientCapabilities",
+            "impact": "low",
+            "description": "Ensure consistent use of optional properties and provide sensible defaults to simplify consumer code",
+            "before": "interface McpUiResourceMeta {\n  contentMimeTypes?: string[];\n}",
+            "after": "interface McpUiResourceMeta {\n  readonly contentMimeTypes?: readonly string[];\n}\n\nfunction getContentMimeTypes(meta: McpUiResourceMeta): readonly string[] {\n  return meta.contentMimeTypes ?? [];\n}",
+            "benefits": "Readonly arrays prevent accidental mutations. Helper function provides consistent default behavior. Reduces null/undefined checks in consumer code."
+          }
+        ],
+        "summary": "Type definitions could benefit from readonly modifiers and helper functions to improve immutability and reduce null checks."
+      }
+    },
+    {
+      "file": "src/ui-content.ts",
+      "codeQuality": {
+        "file": "src/ui-content.ts",
+        "issues": [
+          {
+            "line": 0,
+            "severity": "high",
+            "category": "security",
+            "description": "The function rejects ui:// payload URIs but URI validation implementation details need verification. This validation is critical for preventing malicious payloads",
+            "suggestion": "Ensure URI validation uses a robust parsing library (not regex) and includes comprehensive tests for edge cases (double-encoding, case variations, path traversal). Consider whitelisting allowed schemes rather than blacklisting ui://"
+          },
+          {
+            "line": 0,
+            "severity": "medium",
+            "category": "bug-risk",
+            "description": "Text/blob exclusivity validation enforcement needs clear error messages and boundary case testing",
+            "suggestion": "Ensure the validation throws descriptive errors like 'Cannot specify both text and blob properties' and test boundary cases (null, undefined, empty string)"
+          },
+          {
+            "line": 0,
+            "severity": "medium",
+            "category": "security",
+            "description": "MIME type filtering needs to handle variations and potential security issues (e.g., MIME type sniffing attacks)",
+            "suggestion": "Normalize MIME types to lowercase for comparison, validate format, and consider implementing strict MIME type parsing rather than simple string matching"
+          },
+          {
+            "line": 0,
+            "severity": "low",
+            "category": "best-practice",
+            "description": "Array order preservation assumes insertion order is meaningful",
+            "suggestion": "Document whether order is guaranteed by the specification and add tests that verify order preservation across different JavaScript engine implementations"
+          },
+          {
+            "line": 0,
+            "severity": "low",
+            "category": "bug-risk",
+            "description": "The wildcard [\"*\"] matching logic needs careful implementation to avoid edge cases",
+            "suggestion": "Ensure the function handles empty arrays, null/undefined values, and validates that [\"*\"] is the only element (not [\"*\", \"text/html\"])"
+          }
+        ],
+        "overallScore": 75,
+        "summary": "Helper functions provide good core functionality but need stronger URI validation, MIME type normalization, and edge case handling. Security considerations for untrusted input are critical."
+      },
+      "testCoverage": {
+        "file": "src/ui-content.ts",
+        "hasTests": true,
+        "testFiles": [
+          "Unit tests (13 new tests mentioned)",
+          "ui-content.examples.ts with type-checked JSDoc examples"
+        ],
+        "untestedPaths": [
+          {
+            "type": "edge-case",
+            "location": "createViewContentBlock - malformed MIME type handling",
+            "priority": "medium",
+            "reasoning": "The function validates text/blob exclusivity and rejects ui:// URIs, but handling of malformed or invalid MIME types may not be fully tested",
+            "suggestedTest": "Test with invalid MIME types like empty strings, special characters, or excessively long MIME type strings"
+          },
+          {
+            "type": "edge-case",
+            "location": "createViewContentBlock - boundary conditions for payload size",
+            "priority": "low",
+            "reasoning": "Large payloads or empty payloads may have edge cases",
+            "suggestedTest": "Test with very large blob payloads, empty text payloads, and maximum allowed content sizes"
+          },
+          {
+            "type": "branch",
+            "location": "getViewContentBlocks - mimeType filter with multiple matches",
+            "priority": "medium",
+            "reasoning": "Filtering logic with multiple content blocks of same/different MIME types needs verification",
+            "suggestedTest": "Test with multiple content blocks where some match the filter and some don't, ensure correct ordering is preserved"
+          },
+          {
+            "type": "edge-case",
+            "location": "supportsContentMimeType - wildcard \"*\" interaction with specific types",
+            "priority": "high",
+            "reasoning": "The wildcard [\"*\"] capability needs comprehensive testing with various MIME type combinations",
+            "suggestedTest": "Test wildcard with empty arrays, single specific type, multiple types, and malformed type strings"
+          },
+          {
+            "type": "edge-case",
+            "location": "isViewContentBlock - malformed metadata structures",
+            "priority": "medium",
+            "reasoning": "Guard against partially constructed or corrupted metadata objects",
+            "suggestedTest": "Test with null, undefined, partial _meta objects, and deeply nested malformed structures"
+          }
+        ],
+        "coverageEstimate": 80,
+        "summary": "Helper functions have 13 new unit tests covering core functionality. However, edge cases around MIME type validation, wildcard handling, large payloads, and malformed inputs need additional coverage."
+      },
+      "refactorings": {
+        "file": "src/ui-content.ts",
+        "suggestions": [
+          {
+            "type": "extract-function",
+            "location": "createViewContentBlock() function",
+            "impact": "medium",
+            "description": "Extract validation logic into separate validator functions for better testability and reusability",
+            "before": "function createViewContentBlock(params) {\n  // Validation logic mixed with creation logic\n  if (hasTextAndBlob(params)) throw new Error(\"...\");\n  if (isUiProtocolUri(params.uri)) throw new Error(\"...\");\n  // ... creation logic\n}",
+            "after": "function validateContentBlockExclusivity(params: ContentBlockParams): void {\n  if (params.text && params.blob) {\n    throw new Error(\"Content block cannot have both text and blob\");\n  }\n}\n\nfunction validateContentBlockUri(uri: string): void {\n  if (uri.startsWith(\"ui://\")) {\n    throw new Error(\"ui:// protocol URIs are reserved\");\n  }\n}\n\nfunction createViewContentBlock(params: ContentBlockParams) {\n  validateContentBlockExclusivity(params);\n  if (params.uri) validateContentBlockUri(params.uri);\n  // ... creation logic\n}",
+            "benefits": "Easier to unit test validation rules independently. Validation logic can be reused. Clearer separation of concerns. More descriptive error messages."
+          },
+          {
+            "type": "simplify",
+            "location": "getViewContentBlocks() and isViewContentBlock() functions",
+            "impact": "low",
+            "description": "Consolidate content block extraction using a single predicate function to avoid code duplication",
+            "before": "function isViewContentBlock(block: any): boolean {\n  return block?._meta?.ui?.content !== undefined;\n}\n\nfunction getViewContentBlocks(result: CallToolResult, mimeType?: string) {\n  const blocks = [];\n  for (const block of result.content) {\n    if (block?._meta?.ui?.content !== undefined) {\n      if (!mimeType || block.mimeType === mimeType) blocks.push(block);\n    }\n  }\n  return blocks;\n}",
+            "after": "function isViewContentBlock(block: any, mimeType?: string): boolean {\n  const hasContentMarker = block?._meta?.ui?.content !== undefined;\n  if (!hasContentMarker) return false;\n  return !mimeType || block.mimeType === mimeType;\n}\n\nfunction getViewContentBlocks(result: CallToolResult, mimeType?: string) {\n  return result.content.filter(block => isViewContentBlock(block, mimeType));\n}",
+            "benefits": "Eliminates duplicate marker checking logic. More functional and declarative. Single source of truth. Shorter, more readable code."
+          },
+          {
+            "type": "pattern-improvement",
+            "location": "isViewContentBlock() function",
+            "impact": "high",
+            "description": "Convert isViewContentBlock() to a proper TypeScript type guard to enable type narrowing and better type safety",
+            "before": "function isViewContentBlock(block: any): boolean {\n  return block?._meta?.ui?.content !== undefined;\n}",
+            "after": "interface ViewContentBlock {\n  _meta: { ui: { content: Record<string, never> } };\n  mimeType?: string;\n  uri?: string;\n  text?: string;\n  blob?: string;\n}\n\nfunction isViewContentBlock(block: unknown): block is ViewContentBlock {\n  return (\n    typeof block === 'object' && block !== null &&\n    '_meta' in block && typeof block._meta === 'object' &&\n    block._meta !== null && 'ui' in block._meta &&\n    typeof block._meta.ui === 'object' &&\n    block._meta.ui !== null && 'content' in block._meta.ui\n  );\n}",
+            "benefits": "Enables TypeScript type narrowing. Prevents runtime errors. Better IDE autocomplete. More robust runtime validation."
+          },
+          {
+            "type": "modernize",
+            "location": "supportsContentMimeType() function",
+            "impact": "low",
+            "description": "Optimize wildcard matching using Set for O(1) lookups when dealing with multiple mime types",
+            "before": "function supportsContentMimeType(capabilities: string[], mimeType: string): boolean {\n  if (capabilities.includes(\"*\")) return true;\n  return capabilities.includes(mimeType);\n}",
+            "after": "function supportsContentMimeType(capabilities: readonly string[], mimeType: string): boolean {\n  if (capabilities.length === 0) return false;\n  if (capabilities.includes(\"*\")) return true;\n  const capabilitySet = new Set(capabilities);\n  return capabilitySet.has(mimeType);\n}",
+            "benefits": "Better performance for large capability arrays. Handles edge case of empty array. Uses readonly for immutability. More scalable."
+          }
+        ],
+        "summary": "Helper functions would benefit from extracted validation logic, proper TypeScript type guards, and modern Set-based lookups. These changes improve testability, type safety, and performance."
+      }
+    },
+    {
+      "file": "examples/dynamic-content-server/server.ts",
+      "codeQuality": {
+        "file": "examples/dynamic-content-server/server.ts",
+        "issues": [
+          {
+            "line": 0,
+            "severity": "critical",
+            "category": "security",
+            "description": "XSS prevention implementation needs thorough security audit. While the PR states payloads use createElement/textContent only, all code paths must be verified",
+            "suggestion": "Conduct thorough security audit ensuring NO use of innerHTML, outerHTML, insertAdjacentHTML, eval(), or Function() constructor. Event handlers must not be set from payload strings. Add ESLint rules to ban dangerous patterns"
+          },
+          {
+            "line": 0,
+            "severity": "medium",
+            "category": "security",
+            "description": "Payload-level button actions become tools/call requests, creating potential for tool call injection if payloads are not validated",
+            "suggestion": "Implement strict validation for tool names and parameters derived from payloads. Use an allowlist of permitted tools rather than accepting arbitrary tool calls. Add rate limiting to prevent abuse"
+          },
+          {
+            "line": 0,
+            "severity": "medium",
+            "category": "security",
+            "description": "Custom format application/vnd.example.dynamic-ui+json requires safe JSON parsing",
+            "suggestion": "Use try-catch around JSON.parse, validate schema with Zod before use, and handle malformed JSON gracefully without exposing internal errors to the view"
+          },
+          {
+            "line": 0,
+            "severity": "low",
+            "category": "security",
+            "description": "Error messages returned to the view should not leak implementation details",
+            "suggestion": "Implement error sanitization that returns generic messages to the client while logging detailed errors server-side"
+          },
+          {
+            "line": 0,
+            "severity": "medium",
+            "category": "best-practice",
+            "description": "The visibility: [\"app\"] pattern for hiding tools from the model needs clear documentation",
+            "suggestion": "Add JSDoc comments explaining the security implications of visibility settings and document expected behavior when visibility restrictions are violated"
+          }
+        ],
+        "overallScore": 72,
+        "summary": "Server implementation demonstrates good architectural patterns but requires critical security hardening for XSS prevention, tool call validation, and payload parsing. Documentation of security patterns is needed."
+      },
+      "testCoverage": {
+        "file": "examples/dynamic-content-server/server.ts",
+        "hasTests": true,
+        "testFiles": [
+          "tests/e2e/servers.spec.ts",
+          "Golden screenshot verification"
+        ],
+        "untestedPaths": [
+          {
+            "type": "branch",
+            "location": "search-flights - error handling for invalid search parameters",
+            "priority": "high",
+            "reasoning": "The tool likely has validation logic for search parameters that may not be E2E tested",
+            "suggestedTest": "Test with missing required parameters, invalid date formats, invalid location codes"
+          },
+          {
+            "type": "branch",
+            "location": "select-flight - validation of flight selection from payload",
+            "priority": "high",
+            "reasoning": "Hidden from model but called by renderer's event bridge; needs validation testing",
+            "suggestedTest": "Test with invalid flight IDs, expired selections, concurrent selection attempts"
+          },
+          {
+            "type": "edge-case",
+            "location": "Dynamic UI renderer - XSS prevention",
+            "priority": "critical",
+            "reasoning": "Payloads are untrusted input using createElement/textContent, but comprehensive XSS tests are crucial",
+            "suggestedTest": "Test with payloads containing script tags, event handlers, malicious HTML entities, and unicode exploits"
+          },
+          {
+            "type": "branch",
+            "location": "Event bridge - error handling for failed tool calls",
+            "priority": "high",
+            "reasoning": "The interactive loop needs error handling when select-flight or other tools fail",
+            "suggestedTest": "Test renderer behavior when tool calls timeout, return errors, or return malformed responses"
+          },
+          {
+            "type": "edge-case",
+            "location": "Event bridge - concurrent button clicks",
+            "priority": "medium",
+            "reasoning": "Race conditions in the event bridge when multiple actions are triggered rapidly",
+            "suggestedTest": "Test rapid sequential button clicks and verify proper request queuing/debouncing"
+          },
+          {
+            "type": "edge-case",
+            "location": "dynamic-ui.ts format parser - malformed payloads",
+            "priority": "high",
+            "reasoning": "The stand-in format parser needs robust error handling",
+            "suggestedTest": "Test with invalid JSON, missing required fields, type mismatches, and deeply nested structures"
+          }
+        ],
+        "coverageEstimate": 70,
+        "summary": "E2E test covers the happy path with golden screenshot verification. However, error paths, edge cases, security concerns (XSS), and concurrent interaction scenarios need additional coverage."
+      },
+      "refactorings": {
+        "file": "examples/dynamic-content-server/server.ts",
+        "suggestions": [
+          {
+            "type": "pattern-improvement",
+            "location": "Dynamic UI payload processing",
+            "impact": "high",
+            "description": "Implement a formal validation layer using Zod schemas before processing payloads as untrusted input",
+            "before": "function processPayload(payload: any) {\n  // Direct usage without validation\n  const ui = buildUI(payload.components);\n  return ui;\n}",
+            "after": "import { DynamicUiPayloadSchema } from './schemas';\n\nfunction processPayload(rawPayload: unknown): ProcessedPayload {\n  const validationResult = DynamicUiPayloadSchema.safeParse(rawPayload);\n  if (!validationResult.success) {\n    console.error('Invalid payload:', validationResult.error);\n    throw new PayloadValidationError('Payload failed validation', validationResult.error.errors);\n  }\n  return buildUI(validationResult.data.components);\n}",
+            "benefits": "Enforces untrusted input validation at runtime. Prevents injection attacks and malformed data. Provides clear error messages. Leverages existing Zod infrastructure. Type safety guaranteed after validation."
+          }
+        ],
+        "summary": "Server implementation would benefit significantly from formal payload validation layer using Zod schemas to ensure untrusted input is properly validated before processing."
+      }
+    },
+    {
+      "file": "examples/dynamic-content-server/src/mcp-app.ts",
+      "codeQuality": {
+        "file": "examples/dynamic-content-server/src/mcp-app.ts",
+        "issues": [
+          {
+            "line": 0,
+            "severity": "high",
+            "category": "security",
+            "description": "Security test coverage needs explicit verification for XSS, URI validation, MIME type parsing, malformed JSON, and tool call injection",
+            "suggestion": "Add specific security tests for XSS payload attempts, URI scheme validation bypass attempts, MIME type edge cases, malformed JSON payloads, tool call injection, and rate limiting on event bridge calls"
+          }
+        ],
+        "overallScore": 75,
+        "summary": "Renderer implementation follows secure patterns but needs comprehensive security testing to verify XSS prevention and input validation."
+      },
+      "testCoverage": {
+        "file": "examples/dynamic-content-server/src/mcp-app.ts",
+        "hasTests": true,
+        "testFiles": [
+          "tests/e2e/servers.spec.ts"
+        ],
+        "untestedPaths": [],
+        "coverageEstimate": 70,
+        "summary": "Renderer has E2E coverage but needs additional security-focused tests for XSS prevention, malformed payloads, and edge cases."
+      },
+      "refactorings": {
+        "file": "examples/dynamic-content-server/src/mcp-app.ts",
+        "suggestions": [
+          {
+            "type": "extract-function",
+            "location": "Renderer view's DOM building logic",
+            "impact": "medium",
+            "description": "Extract DOM element creation into reusable helpers using createElement/textContent pattern",
+            "before": "function renderFlightCard(flight: Flight) {\n  const card = document.createElement('div');\n  card.className = 'flight-card';\n  const title = document.createElement('h3');\n  title.textContent = flight.airline;\n  card.appendChild(title);\n  const price = document.createElement('span');\n  price.textContent = `$${flight.price}`;\n  card.appendChild(price);\n  return card;\n}",
+            "after": "function createElement<K extends keyof HTMLElementTagNameMap>(\n  tag: K,\n  props?: { className?: string; textContent?: string; onclick?: (e: Event) => void },\n  children?: HTMLElement[]\n): HTMLElementTagNameMap[K] {\n  const element = document.createElement(tag);\n  if (props?.className) element.className = props.className;\n  if (props?.textContent) element.textContent = props.textContent;\n  if (props?.onclick) element.onclick = props.onclick;\n  if (children) children.forEach(child => element.appendChild(child));\n  return element;\n}\n\nfunction renderFlightCard(flight: Flight) {\n  return createElement('div', { className: 'flight-card' }, [\n    createElement('h3', { textContent: flight.airline }),\n    createElement('span', { textContent: `$${flight.price}` })\n  ]);\n}",
+            "benefits": "Centralized safe DOM creation. More declarative and readable. Easier to add sanitization or validation. Reduces repetitive createElement/appendChild patterns."
+          },
+          {
+            "type": "rename",
+            "location": "Event bridge function naming",
+            "impact": "low",
+            "description": "Improve naming to clearly indicate bridging between UI events and tool calls",
+            "before": "function handleButtonClick(action: string) {\n  callServerTool(action);\n}",
+            "after": "function bridgeUiEventToToolCall(action: ToolAction) {\n  return callServerTool(action.toolName, action.parameters);\n}",
+            "benefits": "Clearer intent of the function. Better conveys the architectural pattern. Easier to understand for new developers. Aligns with domain terminology."
+          }
+        ],
+        "summary": "Renderer implementation could benefit from extracted DOM creation helpers and clearer function naming for the event bridge pattern."
+      }
+    },
+    {
+      "file": "examples/dynamic-content-server/dynamic-ui.ts",
+      "codeQuality": {
+        "file": "examples/dynamic-content-server/dynamic-ui.ts",
+        "issues": [],
+        "overallScore": 90,
+        "summary": "Type definitions for the example dynamic UI format are clear and well-documented. This is a simple stand-in format that serves its educational purpose well."
+      },
+      "testCoverage": {
+        "file": "examples/dynamic-content-server/dynamic-ui.ts",
+        "hasTests": true,
+        "testFiles": [
+          "Used by E2E tests"
+        ],
+        "untestedPaths": [],
+        "coverageEstimate": 85,
+        "summary": "Type definitions are used in E2E tests and serve as documentation for the example format."
+      },
+      "refactorings": {
+        "file": "examples/dynamic-content-server/dynamic-ui.ts",
+        "suggestions": [],
+        "summary": "Type definitions are clean and appropriate for the example's educational purpose. No refactoring needed."
+      }
+    },
+    {
+      "file": "examples/basic-host/serve.ts",
+      "codeQuality": {
+        "file": "examples/basic-host/serve.ts",
+        "issues": [
+          {
+            "line": 127,
+            "severity": "medium",
+            "category": "security",
+            "description": "Path traversal fix needs verification. The sendFile fix for dotfiles behavior is good but implementation needs security validation",
+            "suggestion": "Ensure the path resolution prevents directory traversal attacks. Use path.resolve() and validate the resulting path is within the expected directory"
+          }
+        ],
+        "overallScore": 80,
+        "summary": "Bug fix for serving files from dot-directories is appropriate. Security validation of path resolution should be verified."
+      },
+      "testCoverage": {
+        "file": "examples/basic-host/serve.ts",
+        "hasTests": false,
+        "testFiles": [],
+        "untestedPaths": [
+          {
+            "type": "function",
+            "location": "res.sendFile with absolute path",
+            "priority": "medium",
+            "reasoning": "Bug fix for serving sandbox.html from dot-directories (e.g., .claude/worktrees) is not tested",
+            "suggestedTest": "Add unit test verifying files can be served from paths containing dot-directories"
+          },
+          {
+            "type": "edge-case",
+            "location": "res.sendFile root parameter edge cases",
+            "priority": "low",
+            "reasoning": "The fix uses relative paths with root parameter; needs validation",
+            "suggestedTest": "Test with various directory structures including nested dot-directories, symlinks, and unusual path characters"
+          }
+        ],
+        "coverageEstimate": 30,
+        "summary": "Bug fix for serving files from dot-directories lacks specific test coverage. Regression tests should verify behavior with various path configurations."
+      },
+      "refactorings": {
+        "file": "examples/basic-host/serve.ts",
+        "suggestions": [],
+        "summary": "Bug fix is straightforward and doesn't require refactoring. Adding tests would be more valuable than code changes."
+      }
+    },
+    {
+      "file": "src/generated/*",
+      "codeQuality": {
+        "file": "src/generated/*",
+        "issues": [],
+        "overallScore": 95,
+        "summary": "Generated Zod schemas are automatically created from type definitions and include round-trip validation tests. Generation process ensures correctness."
+      },
+      "testCoverage": {
+        "file": "src/generated/*",
+        "hasTests": true,
+        "testFiles": [
+          "Regenerated schema round-trip tests"
+        ],
+        "untestedPaths": [],
+        "coverageEstimate": 100,
+        "summary": "Generated Zod schemas have automated round-trip tests that validate schema correctness. These are automatically generated and comprehensively tested."
+      },
+      "refactorings": {
+        "file": "src/generated/*",
+        "suggestions": [],
+        "summary": "Generated files should not be manually refactored. Improvements should be made to the generation process or source types."
+      }
+    },
+    {
+      "file": "package-lock.json",
+      "codeQuality": {
+        "file": "package-lock.json",
+        "issues": [
+          {
+            "line": 0,
+            "severity": "medium",
+            "category": "security",
+            "description": "New workspace entries in package-lock.json should be audited for vulnerabilities",
+            "suggestion": "Run npm audit and address any high/critical vulnerabilities. Set up automated dependency scanning in CI"
+          }
+        ],
+        "overallScore": 85,
+        "summary": "Dependency lock file updates should be audited for security vulnerabilities using automated tooling."
+      },
+      "testCoverage": {
+        "file": "package-lock.json",
+        "hasTests": false,
+        "testFiles": [],
+        "untestedPaths": [],
+        "coverageEstimate": 0,
+        "summary": "Lock file does not require tests but should be validated for security vulnerabilities."
+      },
+      "refactorings": {
+        "file": "package-lock.json",
+        "suggestions": [],
+        "summary": "Lock file is generated and should not be manually modified."
+      }
+    }
+  ],
+  "summary": {
+    "totalFiles": 8,
+    "overallScore": 82,
+    "criticalIssues": 1,
+    "highPriorityTests": 8,
+    "refactoringOpportunities": 8
+  },
+  "recommendations": [
+    {
+      "priority": "critical",
+      "category": "Security Testing",
+      "description": "Add comprehensive security test suite covering XSS prevention, URI validation bypass attempts, MIME type parsing edge cases, malformed JSON payloads, tool call injection attempts, and rate limiting on event bridge calls. The renderer's use of createElement/textContent is excellent, but needs explicit test coverage to ensure no innerHTML or similar dangerous patterns exist.",
+      "files": [
+        "examples/dynamic-content-server/server.ts",
+        "examples/dynamic-content-server/src/mcp-app.ts"
+      ]
+    },
+    {
+      "priority": "high",
+      "category": "URI and Payload Validation",
+      "description": "Implement robust URI validation using URL parsing (not regex) with whitelisted schemes rather than blacklisting ui://. Add formal Zod-based payload validation layer before processing any untrusted input. Ensure MIME type normalization and strict parsing.",
+      "files": [
+        "src/ui-content.ts",
+        "examples/dynamic-content-server/server.ts"
+      ]
+    },
+    {
+      "priority": "high",
+      "category": "Tool Call Security",
+      "description": "Implement strict allowlist-based validation for tool names called from the event bridge. Add rate limiting to prevent abuse of app-visibility tools. Document security implications of the visibility pattern.",
+      "files": [
+        "examples/dynamic-content-server/server.ts"
+      ]
+    },
+    {
+      "priority": "high",
+      "category": "Error Path Testing",
+      "description": "Expand test coverage to include error paths, edge cases, and failure scenarios. Test helper functions with malformed inputs, empty arrays, null/undefined values, and boundary conditions. Add tests for concurrent interactions and race conditions in the event bridge.",
+      "files": [
+        "src/ui-content.ts",
+        "examples/dynamic-content-server/server.ts"
+      ]
+    },
+    {
+      "priority": "medium",
+      "category": "Type Safety Improvements",
+      "description": "Convert isViewContentBlock() to a proper TypeScript type guard for better type narrowing. Extract validation logic into reusable functions. Add readonly modifiers to prevent accidental mutations.",
+      "files": [
+        "src/ui-content.ts",
+        "src/spec.types.ts"
+      ]
+    },
+    {
+      "priority": "medium",
+      "category": "Bug Fix Testing",
+      "description": "Add regression tests for the basic-host sendFile fix, verifying files can be served from dot-directories like .claude/worktrees. Test with various path configurations including symlinks.",
+      "files": [
+        "examples/basic-host/serve.ts"
+      ]
+    },
+    {
+      "priority": "medium",
+      "category": "Schema Regeneration Automation",
+      "description": "Add pre-commit or pre-build hooks to automatically regenerate Zod schemas from TypeScript types. Add CI check that fails if generated files are out of sync with source types.",
+      "files": [
+        "src/spec.types.ts",
+        "src/generated/*"
+      ]
+    },
+    {
+      "priority": "medium",
+      "category": "Documentation",
+      "description": "Add comprehensive JSDoc documentation to all public APIs covering purpose, parameters, return values, thrown errors, usage examples, and security considerations. Document the wildcard [\"*\"] capability and its security implications.",
+      "files": [
+        "src/ui-content.ts",
+        "src/spec.types.ts",
+        "examples/dynamic-content-server/server.ts"
+      ]
+    },
+    {
+      "priority": "low",
+      "category": "Code Quality",
+      "description": "Extract DOM creation helpers for the renderer to centralize safe element creation. Modernize MIME type checking using Set for better performance. Improve function naming to better convey intent (e.g., bridgeUiEventToToolCall).",
+      "files": [
+        "examples/dynamic-content-server/src/mcp-app.ts",
+        "src/ui-content.ts"
+      ]
+    },
+    {
+      "priority": "low",
+      "category": "Dependency Security",
+      "description": "Run npm audit to check for vulnerabilities in new dependencies. Set up automated dependency scanning in CI pipeline to catch security issues early.",
+      "files": [
+        "package-lock.json"
+      ]
+    }
+  ],
+  "metadata": {
+    "analyzedAt": "2026-09-27T01:18:08Z",
+    "duration": 498399,
+    "agentVersions": {
+      "code-quality-analyzer": "af407ea",
+      "test-coverage-analyzer": "a6cdb03",
+      "refactoring-suggester": "a25de5c"
+    }
+  }
+}

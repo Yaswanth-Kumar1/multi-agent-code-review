@@ -1,0 +1,438 @@
+{
+  "pullRequest": {
+    "owner": "modelcontextprotocol",
+    "repo": "ext-apps",
+    "number": 705
+  },
+  "fileReviews": [
+    {
+      "file": "src/app-bridge.test.ts",
+      "codeQuality": {
+        "file": "src/app-bridge.test.ts",
+        "issues": [],
+        "overallScore": 100,
+        "summary": "Clean test file changes. All three import statements correctly updated with .js extensions. No issues detected."
+      },
+      "testCoverage": {
+        "file": "src/app-bridge.test.ts",
+        "hasTests": true,
+        "testFiles": [
+          "src/app-bridge.test.ts"
+        ],
+        "untestedPaths": [],
+        "coverageEstimate": 100,
+        "summary": "Test file itself - no additional tests needed for import syntax changes"
+      },
+      "refactorings": {
+        "file": "src/app-bridge.test.ts",
+        "suggestions": [],
+        "summary": "No refactoring opportunities identified for this test file"
+      }
+    },
+    {
+      "file": "src/app-bridge.ts",
+      "codeQuality": {
+        "file": "src/app-bridge.ts",
+        "issues": [],
+        "overallScore": 100,
+        "summary": "Core bridge file with 6 import/export statements updated. All changes are consistent and correct. The file maintains proper separation between imports and exports."
+      },
+      "testCoverage": {
+        "file": "src/app-bridge.ts",
+        "hasTests": true,
+        "testFiles": [
+          "src/app-bridge.test.ts"
+        ],
+        "untestedPaths": [],
+        "coverageEstimate": 100,
+        "summary": "Covered by existing comprehensive test suite; no new code paths introduced"
+      },
+      "refactorings": {
+        "file": "src/app-bridge.ts",
+        "suggestions": [
+          {
+            "type": "extract-function",
+            "location": "Lines 87-97 (import/export block)",
+            "impact": "medium",
+            "description": "The file contains scattered imports and exports from multiple related modules creating a barrel export anti-pattern that can lead to circular dependency issues and reduced tree-shaking effectiveness",
+            "before": "export * from \"./types.js\";\nexport { RESOURCE_URI_META_KEY, RESOURCE_MIME_TYPE } from \"./constants.js\";\nexport { PostMessageTransport } from \"./message-transport.js\";",
+            "after": "// Export individual items explicitly\nexport type { McpUiHostCapabilities, McpUiOpenLinkResult } from \"./types.js\";\nexport { RESOURCE_URI_META_KEY, RESOURCE_MIME_TYPE } from \"./constants.js\";\nexport { PostMessageTransport } from \"./message-transport.js\";",
+            "benefits": "Better tree-shaking for consumers, reduced risk of circular dependencies, explicit API surface, improved IDE autocomplete performance"
+          },
+          {
+            "type": "pattern-improvement",
+            "location": "Lines 34-42 (EventDispatcher usage)",
+            "impact": "high",
+            "description": "The EventDispatcher is used as a base class; consider composition over inheritance for more flexible class structure",
+            "before": "import { EventDispatcher } from \"./events.js\";\nclass AppBridge extends ProtocolWithEvents<McpUiHostCapabilities> { }",
+            "after": "import { EventDispatcher } from \"./events.js\";\n\nclass AppBridge {\n  private eventDispatcher = new EventDispatcher<McpUiHostCapabilities>();\n  addEventListener = this.eventDispatcher.addEventListener.bind(this.eventDispatcher);\n}",
+            "benefits": "More flexible class structure, easier to test in isolation, clearer separation of concerns, avoids deep inheritance chains"
+          }
+        ],
+        "summary": "Consider refactoring barrel exports and using composition over inheritance for EventDispatcher"
+      }
+    },
+    {
+      "file": "src/app.ts",
+      "codeQuality": {
+        "file": "src/app.ts",
+        "issues": [],
+        "overallScore": 100,
+        "summary": "Main app file with 10 import/export statements updated. All relative imports now have .js extensions while external package imports remain unchanged, which is correct."
+      },
+      "testCoverage": {
+        "file": "src/app.ts",
+        "hasTests": true,
+        "testFiles": [
+          "src/app-bridge.test.ts"
+        ],
+        "untestedPaths": [],
+        "coverageEstimate": 100,
+        "summary": "Core module with comprehensive existing test coverage; types-only change requires no new tests"
+      },
+      "refactorings": {
+        "file": "src/app.ts",
+        "suggestions": [
+          {
+            "type": "simplify",
+            "location": "Lines 22-98 (export organization)",
+            "impact": "high",
+            "description": "Multiple export patterns (export *, export {}, export type {}) are scattered throughout creating confusion about the module's public API",
+            "before": "export { RESOURCE_MIME_TYPE, RESOURCE_URI_META_KEY } from \"./constants.js\";\nimport { EventDispatcher } from \"./events.js\";\nexport { EventDispatcher } from \"./events.js\";\nexport * from \"./types.js\";",
+            "after": "// === Constants ===\nexport { RESOURCE_MIME_TYPE, RESOURCE_URI_META_KEY } from \"./constants.js\";\n\n// === Core Types ===\nexport type { StandardSchemaV1, StandardSchemaWithJSON } from \"./standard-schema.js\";\n\n// === Utilities ===\nexport { EventDispatcher } from \"./events.js\";",
+            "benefits": "Clearer module API boundary, easier to maintain and understand, better documentation generation, improved tree-shaking"
+          },
+          {
+            "type": "modernize",
+            "location": "Lines 84-92 (mergeAppCapabilities function)",
+            "impact": "medium",
+            "description": "Function uses manual object merging; modern TypeScript should use object spread with proper type inference",
+            "before": "function mergeAppCapabilities(\n  provided: Partial<McpUiAppCapabilities> | undefined,\n  defaults: McpUiAppCapabilities\n): McpUiAppCapabilities {\n  // Manual merging logic\n}",
+            "after": "function mergeAppCapabilities(\n  provided: Partial<McpUiAppCapabilities> | undefined,\n  defaults: McpUiAppCapabilities\n): McpUiAppCapabilities {\n  return { ...defaults, ...provided, experimental: { ...defaults.experimental, ...provided?.experimental } };\n}",
+            "benefits": "More concise and readable, less error-prone, better type inference, follows modern JavaScript patterns"
+          }
+        ],
+        "summary": "Consolidate and organize exports into logical groups; modernize object merging using spread operators"
+      }
+    },
+    {
+      "file": "src/message-transport.test.ts",
+      "codeQuality": {
+        "file": "src/message-transport.test.ts",
+        "issues": [],
+        "overallScore": 100,
+        "summary": "Single import statement correctly updated. Clean and straightforward change."
+      },
+      "testCoverage": {
+        "file": "src/message-transport.test.ts",
+        "hasTests": true,
+        "testFiles": [
+          "src/message-transport.test.ts"
+        ],
+        "untestedPaths": [],
+        "coverageEstimate": 100,
+        "summary": "Test file itself - no additional tests needed for import syntax changes"
+      },
+      "refactorings": {
+        "file": "src/message-transport.test.ts",
+        "suggestions": [],
+        "summary": "No refactoring opportunities identified for this test file"
+      }
+    },
+    {
+      "file": "src/message-transport.ts",
+      "codeQuality": {
+        "file": "src/message-transport.ts",
+        "issues": [],
+        "overallScore": 100,
+        "summary": "Single import statement correctly updated from ./spec.types to ./spec.types.js"
+      },
+      "testCoverage": {
+        "file": "src/message-transport.ts",
+        "hasTests": true,
+        "testFiles": [
+          "src/message-transport.test.ts"
+        ],
+        "untestedPaths": [],
+        "coverageEstimate": 100,
+        "summary": "Has dedicated test file; types-only change requires no additional tests"
+      },
+      "refactorings": {
+        "file": "src/message-transport.ts",
+        "suggestions": [],
+        "summary": "No refactoring opportunities identified"
+      }
+    },
+    {
+      "file": "src/react/index.tsx",
+      "codeQuality": {
+        "file": "src/react/index.tsx",
+        "issues": [],
+        "overallScore": 100,
+        "summary": "React barrel file with 4 re-export statements updated. All exports correctly point to .js extensions."
+      },
+      "testCoverage": {
+        "file": "src/react/index.tsx",
+        "hasTests": true,
+        "testFiles": [
+          "src/app-bridge.test.ts"
+        ],
+        "untestedPaths": [],
+        "coverageEstimate": 100,
+        "summary": "Re-export only barrel file with no logic; underlying hooks are tested"
+      },
+      "refactorings": {
+        "file": "src/react/index.tsx",
+        "suggestions": [
+          {
+            "type": "simplify",
+            "location": "Lines 31-35 (barrel exports)",
+            "impact": "low",
+            "description": "Barrel export pattern using export * could be more explicit about what's exported for better IDE support and documentation",
+            "before": "export * from \"./useApp.js\";\nexport * from \"./useAutoResize.js\";\nexport * from \"./useDocumentTheme.js\";\nexport * from \"./useHostStyles.js\";",
+            "after": "export { useApp, type UseAppOptions, type UseAppResult } from \"./useApp.js\";\nexport { useAutoResize } from \"./useAutoResize.js\";\nexport { useDocumentTheme } from \"./useDocumentTheme.js\";\nexport { useHostStyles } from \"./useHostStyles.js\";",
+            "benefits": "Explicit API surface, better autocomplete in IDEs, easier to track what's public, prevents accidental exports"
+          }
+        ],
+        "summary": "Consider making barrel exports explicit for better developer experience"
+      }
+    },
+    {
+      "file": "src/react/useApp.tsx",
+      "codeQuality": {
+        "file": "src/react/useApp.tsx",
+        "issues": [],
+        "overallScore": 100,
+        "summary": "Two statements updated - one import and one re-export from ../app.js. Both correctly reference the parent directory module."
+      },
+      "testCoverage": {
+        "file": "src/react/useApp.tsx",
+        "hasTests": true,
+        "testFiles": [
+          "src/app-bridge.test.ts"
+        ],
+        "untestedPaths": [],
+        "coverageEstimate": 100,
+        "summary": "React hook covered by existing tests; types-only change requires no new tests"
+      },
+      "refactorings": {
+        "file": "src/react/useApp.tsx",
+        "suggestions": [
+          {
+            "type": "pattern-improvement",
+            "location": "Lines 5-9 (re-export pattern)",
+            "impact": "medium",
+            "description": "Re-exporting everything from the parent module creates tight coupling and can cause circular dependencies",
+            "before": "import {\n  App,\n  AppOptions,\n  McpUiAppCapabilities,\n  PostMessageTransport,\n} from \"../app.js\";\nexport * from \"../app.js\";",
+            "after": "import {\n  App,\n  type AppOptions,\n  type McpUiAppCapabilities,\n  PostMessageTransport,\n} from \"../app.js\";\nexport type { AppOptions, McpUiAppCapabilities };\nexport { PostMessageTransport };",
+            "benefits": "Reduced coupling, smaller bundle size for React consumers, clearer React-specific API, better tree-shaking"
+          }
+        ],
+        "summary": "Reduce coupling by only re-exporting what React users specifically need"
+      }
+    },
+    {
+      "file": "src/react/useAutoResize.ts",
+      "codeQuality": {
+        "file": "src/react/useAutoResize.ts",
+        "issues": [],
+        "overallScore": 100,
+        "summary": "Single import statement correctly updated with parent directory reference."
+      },
+      "testCoverage": {
+        "file": "src/react/useAutoResize.ts",
+        "hasTests": true,
+        "testFiles": [
+          "src/app-bridge.test.ts"
+        ],
+        "untestedPaths": [],
+        "coverageEstimate": 100,
+        "summary": "React hook covered by existing tests; types-only change requires no new tests"
+      },
+      "refactorings": {
+        "file": "src/react/useAutoResize.ts",
+        "suggestions": [],
+        "summary": "No refactoring opportunities identified"
+      }
+    },
+    {
+      "file": "src/react/useDocumentTheme.ts",
+      "codeQuality": {
+        "file": "src/react/useDocumentTheme.ts",
+        "issues": [],
+        "overallScore": 100,
+        "summary": "Two import statements correctly updated with .js extensions for parent directory modules."
+      },
+      "testCoverage": {
+        "file": "src/react/useDocumentTheme.ts",
+        "hasTests": true,
+        "testFiles": [
+          "src/app-bridge.test.ts"
+        ],
+        "untestedPaths": [],
+        "coverageEstimate": 100,
+        "summary": "React hook covered by existing tests; types-only change requires no new tests"
+      },
+      "refactorings": {
+        "file": "src/react/useDocumentTheme.ts",
+        "suggestions": [],
+        "summary": "No refactoring opportunities identified"
+      }
+    },
+    {
+      "file": "src/react/useHostStyles.ts",
+      "codeQuality": {
+        "file": "src/react/useHostStyles.ts",
+        "issues": [],
+        "overallScore": 100,
+        "summary": "Three import statements correctly updated. All parent directory references now include .js extensions."
+      },
+      "testCoverage": {
+        "file": "src/react/useHostStyles.ts",
+        "hasTests": true,
+        "testFiles": [
+          "src/app-bridge.test.ts"
+        ],
+        "untestedPaths": [],
+        "coverageEstimate": 100,
+        "summary": "React hook covered by existing tests; types-only change requires no new tests"
+      },
+      "refactorings": {
+        "file": "src/react/useHostStyles.ts",
+        "suggestions": [],
+        "summary": "No refactoring opportunities identified"
+      }
+    },
+    {
+      "file": "src/server/index.test.ts",
+      "codeQuality": {
+        "file": "src/server/index.test.ts",
+        "issues": [
+          {
+            "line": 9,
+            "severity": "info",
+            "category": "best-practice",
+            "description": "Test file imports from ./index.js which is the same directory. Consider whether using a more specific import path or importing individual exports directly would improve test clarity.",
+            "suggestion": "This is acceptable for barrel file testing, but ensure the test is actually testing the public API surface rather than implementation details."
+          }
+        ],
+        "overallScore": 98,
+        "summary": "Single import statement correctly updated. Minor consideration about test organization, but not an actual issue with the change."
+      },
+      "testCoverage": {
+        "file": "src/server/index.test.ts",
+        "hasTests": true,
+        "testFiles": [
+          "src/server/index.test.ts"
+        ],
+        "untestedPaths": [],
+        "coverageEstimate": 100,
+        "summary": "Test file itself - no additional tests needed for import syntax changes"
+      },
+      "refactorings": {
+        "file": "src/server/index.test.ts",
+        "suggestions": [],
+        "summary": "No refactoring opportunities identified for this test file"
+      }
+    },
+    {
+      "file": "src/styles.ts",
+      "codeQuality": {
+        "file": "src/styles.ts",
+        "issues": [],
+        "overallScore": 100,
+        "summary": "Single import statement correctly updated from ./types to ./types.js"
+      },
+      "testCoverage": {
+        "file": "src/styles.ts",
+        "hasTests": true,
+        "testFiles": [
+          "src/app-bridge.test.ts"
+        ],
+        "untestedPaths": [],
+        "coverageEstimate": 100,
+        "summary": "Styling utilities covered by existing tests; types-only change requires no new tests"
+      },
+      "refactorings": {
+        "file": "src/styles.ts",
+        "suggestions": [],
+        "summary": "No refactoring opportunities identified"
+      }
+    }
+  ],
+  "summary": {
+    "totalFiles": 12,
+    "overallScore": 99,
+    "criticalIssues": 0,
+    "highPriorityTests": 0,
+    "refactoringOpportunities": 6
+  },
+  "recommendations": [
+    {
+      "priority": "high",
+      "category": "maintainability",
+      "description": "Add ESLint rule to enforce .js extensions on relative imports to prevent regression. Consider using 'import/extensions' rule to maintain this pattern in future contributions.",
+      "files": [
+        "package.json",
+        ".eslintrc"
+      ]
+    },
+    {
+      "priority": "high",
+      "category": "refactoring",
+      "description": "Replace barrel exports (export *) with explicit exports across the codebase to improve tree-shaking, prevent circular dependencies, and make the API surface more clear and intentional.",
+      "files": [
+        "src/app-bridge.ts",
+        "src/app.ts",
+        "src/react/index.tsx",
+        "src/react/useApp.tsx"
+      ]
+    },
+    {
+      "priority": "medium",
+      "category": "modernization",
+      "description": "Use 'import type' syntax for type-only imports throughout the codebase to distinguish between type-only and runtime imports, improving tree-shaking and compilation speed.",
+      "files": [
+        "src/app-bridge.ts",
+        "src/app.ts",
+        "src/react/useApp.tsx",
+        "src/react/useDocumentTheme.ts",
+        "src/react/useHostStyles.ts"
+      ]
+    },
+    {
+      "priority": "medium",
+      "category": "documentation",
+      "description": "Add documentation in contributing guidelines or README about the requirement to use .js extensions for relative imports in TypeScript files and why moduleResolution: bundler is used for development.",
+      "files": [
+        "README.md",
+        "CONTRIBUTING.md"
+      ]
+    },
+    {
+      "priority": "low",
+      "category": "architecture",
+      "description": "Consider refactoring EventDispatcher usage from inheritance to composition pattern for more flexible class structure and better separation of concerns.",
+      "files": [
+        "src/app-bridge.ts"
+      ]
+    },
+    {
+      "priority": "low",
+      "category": "code-organization",
+      "description": "Consolidate and organize exports into logical sections with comments (Constants, Core Types, Utilities) to improve code maintainability and developer experience.",
+      "files": [
+        "src/app.ts"
+      ]
+    }
+  ],
+  "metadata": {
+    "analyzedAt": "2026-09-27T00:00:00Z",
+    "duration": 171774,
+    "agentVersions": {
+      "code-quality-analyzer": "adb004f",
+      "test-coverage-analyzer": "ae664a5",
+      "refactoring-suggester": "a7a74b1"
+    }
+  }
+}

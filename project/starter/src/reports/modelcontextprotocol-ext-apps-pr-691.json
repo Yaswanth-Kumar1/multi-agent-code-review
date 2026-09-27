@@ -1,0 +1,293 @@
+{
+  "pullRequest": {
+    "owner": "modelcontextprotocol",
+    "repo": "ext-apps",
+    "number": 691
+  },
+  "fileReviews": [
+    {
+      "file": "specification/draft/apps.mdx",
+      "codeQuality": {
+        "file": "specification/draft/apps.mdx",
+        "issues": [],
+        "overallScore": 100,
+        "summary": "Documentation file with clean additions. The changes add documentation for the new 'tools' permission in multiple locations within the specification. Formatting is consistent with existing documentation, and the descriptions are clear and accurate."
+      },
+      "testCoverage": {
+        "file": "specification/draft/apps.mdx",
+        "hasTests": false,
+        "testFiles": [],
+        "untestedPaths": [],
+        "coverageEstimate": 100,
+        "summary": "This is a documentation file. Documentation changes don't require automated tests, though manual review should verify accuracy and completeness of the documentation for the tools permission."
+      },
+      "refactorings": {
+        "file": "specification/draft/apps.mdx",
+        "suggestions": [],
+        "summary": "Documentation updates are clear and follow the existing format. No refactoring opportunities identified."
+      }
+    },
+    {
+      "file": "src/app-bridge.test.ts",
+      "codeQuality": {
+        "file": "src/app-bridge.test.ts",
+        "issues": [
+          {
+            "line": 2841,
+            "severity": "low",
+            "category": "maintainability",
+            "description": "The test adds 'tools' to the expected output but doesn't verify the order independence of permissions. The test assumes a specific order which makes it brittle if the implementation changes.",
+            "suggestion": "Consider testing that all expected permissions are present in the output string rather than testing exact string equality, or document that the order is part of the contract."
+          }
+        ],
+        "overallScore": 92,
+        "summary": "Test coverage is good with both a single permission test and a combined permissions test. The new test case follows existing patterns. Minor concern about order-dependent string comparison in the multi-permission test which could make tests brittle."
+      },
+      "testCoverage": {
+        "file": "src/app-bridge.test.ts",
+        "hasTests": true,
+        "testFiles": [
+          "src/app-bridge.test.ts"
+        ],
+        "untestedPaths": [
+          {
+            "type": "edge-case",
+            "location": "buildAllowAttribute function - tools permission with falsy values",
+            "priority": "medium",
+            "reasoning": "The test only verifies the happy path where tools permission is set to an empty object ({}). It does not test what happens if tools is set to undefined, null, or other falsy values that might pass TypeScript but fail at runtime.",
+            "suggestedTest": "Add test case: buildAllowAttribute({ tools: undefined }) should not include 'tools' in output. Also test with null and other edge values to ensure robustness of the conditional check."
+          },
+          {
+            "type": "branch",
+            "location": "buildAllowAttribute - negative case without tools",
+            "priority": "high",
+            "reasoning": "While the positive case (tools set) is tested, there's no explicit test for the negative branch where tools is NOT set in a permissions object. The combined test includes tools, but doesn't have a control test without it.",
+            "suggestedTest": "Add test case: buildAllowAttribute({ camera: {}, microphone: {} }) (without tools) should return 'camera; microphone' without 'tools', to explicitly verify the conditional works correctly when tools is absent."
+          }
+        ],
+        "coverageEstimate": 75,
+        "summary": "The implementation change has basic test coverage with two test cases: one for tools in isolation and one for tools combined with all other permissions. However, edge cases around falsy values, permission combinations, and explicit negative case testing are missing."
+      },
+      "refactorings": {
+        "file": "src/app-bridge.test.ts",
+        "suggestions": [],
+        "summary": "The test file follows the existing pattern appropriately. The new test for the 'tools' permission is consistent with other single-permission tests. No significant refactoring needed."
+      }
+    },
+    {
+      "file": "src/app-bridge.ts",
+      "codeQuality": {
+        "file": "src/app-bridge.ts",
+        "issues": [
+          {
+            "line": 197,
+            "severity": "info",
+            "category": "maintainability",
+            "description": "The permission mapping logic uses a sequential if-statement pattern. While functional, this could become harder to maintain as more permissions are added.",
+            "suggestion": "Consider refactoring to a data-driven approach using an object/map that defines the permission key to allow attribute mapping, making it easier to add new permissions in the future."
+          }
+        ],
+        "overallScore": 95,
+        "summary": "The implementation is straightforward and follows the established pattern in the codebase. The change correctly adds the 'tools' permission to the allow list. Code is clean and functional, with a minor maintainability consideration for future scalability."
+      },
+      "testCoverage": {
+        "file": "src/app-bridge.ts",
+        "hasTests": true,
+        "testFiles": [
+          "src/app-bridge.test.ts"
+        ],
+        "untestedPaths": [
+          {
+            "type": "edge-case",
+            "location": "buildAllowAttribute function - line 197",
+            "priority": "medium",
+            "reasoning": "No test verifies behavior when tools is combined with only a subset of other permissions (e.g., just tools + camera), only all permissions together or tools alone.",
+            "suggestedTest": "Add test cases for various permission combinations: buildAllowAttribute({ tools: {}, camera: {} }), buildAllowAttribute({ tools: {}, microphone: {}, geolocation: {} }) to ensure tools integrates correctly with different subsets."
+          },
+          {
+            "type": "edge-case",
+            "location": "buildAllowAttribute function - permission ordering",
+            "priority": "low",
+            "reasoning": "No test verifies the ordering of permissions when tools is combined with other permissions in different orders. While the current implementation has a fixed order, tests should verify this behavior is consistent.",
+            "suggestedTest": "Add test case: buildAllowAttribute({ tools: {}, camera: {} }) should produce 'camera; tools' to verify the specific ordering is maintained."
+          }
+        ],
+        "coverageEstimate": 75,
+        "summary": "The implementation change has basic test coverage. The main happy paths are covered, but defensive edge cases and negative branches are not explicitly tested."
+      },
+      "refactorings": {
+        "file": "src/app-bridge.ts",
+        "suggestions": [
+          {
+            "type": "pattern-improvement",
+            "location": "buildAllowAttribute function (lines 194-200)",
+            "impact": "high",
+            "description": "The current implementation uses repetitive if-statements to map permission object properties to Permission Policy feature names. This creates maintenance burden as each new permission requires adding a new if-statement. The mapping between TypeScript property names and Permission Policy feature names (e.g., clipboardWrite → clipboard-write) is inconsistent and implicit.",
+            "before": "export function buildAllowAttribute(\n  permissions: McpUiResourcePermissions,\n): string {\n  const allowList: string[] = [];\n  if (permissions.camera) allowList.push(\"camera\");\n  if (permissions.microphone) allowList.push(\"microphone\");\n  if (permissions.geolocation) allowList.push(\"geolocation\");\n  if (permissions.clipboardWrite) allowList.push(\"clipboard-write\");\n  if (permissions.tools) allowList.push(\"tools\");\n  return allowList.join(\"; \");\n}",
+            "after": "const PERMISSION_POLICY_MAP: Record<keyof McpUiResourcePermissions, string> = {\n  camera: \"camera\",\n  microphone: \"microphone\",\n  geolocation: \"geolocation\",\n  clipboardWrite: \"clipboard-write\",\n  tools: \"tools\",\n} as const;\n\nexport function buildAllowAttribute(\n  permissions: McpUiResourcePermissions,\n): string {\n  return Object.entries(permissions)\n    .filter(([_, value]) => value !== undefined)\n    .map(([key]) => PERMISSION_POLICY_MAP[key as keyof McpUiResourcePermissions])\n    .filter(Boolean)\n    .join(\"; \");\n}",
+            "benefits": "Eliminates repetitive code (DRY principle), makes adding new permissions require only updating the map, centralizes the TypeScript-to-Policy-name mapping, reduces chance of errors when adding new permissions, makes transformation logic more declarative, and ensures type-safe mapping."
+          },
+          {
+            "type": "extract-function",
+            "location": "buildAllowAttribute function",
+            "impact": "medium",
+            "description": "As an alternative to the full declarative refactoring, extract the permission checking logic into a separate helper function to reduce duplication while maintaining linear flow.",
+            "before": "export function buildAllowAttribute(\n  permissions: McpUiResourcePermissions,\n): string {\n  const allowList: string[] = [];\n  if (permissions.camera) allowList.push(\"camera\");\n  if (permissions.microphone) allowList.push(\"microphone\");\n  if (permissions.geolocation) allowList.push(\"geolocation\");\n  if (permissions.clipboardWrite) allowList.push(\"clipboard-write\");\n  if (permissions.tools) allowList.push(\"tools\");\n  return allowList.join(\"; \");\n}",
+            "after": "function addPermissionIfPresent(\n  allowList: string[],\n  permissions: McpUiResourcePermissions,\n  key: keyof McpUiResourcePermissions,\n  policyName: string,\n): void {\n  if (permissions[key]) {\n    allowList.push(policyName);\n  }\n}\n\nexport function buildAllowAttribute(\n  permissions: McpUiResourcePermissions,\n): string {\n  const allowList: string[] = [];\n  addPermissionIfPresent(allowList, permissions, \"camera\", \"camera\");\n  addPermissionIfPresent(allowList, permissions, \"microphone\", \"microphone\");\n  addPermissionIfPresent(allowList, permissions, \"geolocation\", \"geolocation\");\n  addPermissionIfPresent(allowList, permissions, \"clipboardWrite\", \"clipboard-write\");\n  addPermissionIfPresent(allowList, permissions, \"tools\", \"tools\");\n  return allowList.join(\"; \");\n}",
+            "benefits": "Reduces duplication in the conditional logic, makes the pattern more explicit, easier to test the permission-adding logic in isolation, and maintains a clear, linear flow that's easy to read."
+          }
+        ],
+        "summary": "The most significant refactoring opportunity exists in the buildAllowAttribute function. The current implementation uses repetitive if-statements that violate the DRY principle. A permission policy mapping table would declaratively define the relationship between TypeScript property names and Permission Policy feature names, improving maintainability."
+      }
+    },
+    {
+      "file": "src/generated/schema.json",
+      "codeQuality": {
+        "file": "src/generated/schema.json",
+        "issues": [],
+        "overallScore": 100,
+        "summary": "This is a generated file that appears to be correctly produced. The JSON schema additions for the 'tools' property are consistent across all locations where permissions are defined. The schema structure matches existing permission definitions exactly, with proper description and type constraints."
+      },
+      "testCoverage": {
+        "file": "src/generated/schema.json",
+        "hasTests": false,
+        "testFiles": [],
+        "untestedPaths": [],
+        "coverageEstimate": 100,
+        "summary": "This is a generated JSON schema file used for validation and documentation. As a generated artifact, it doesn't require direct testing. The schema is validated through the TypeScript types and Zod schemas that generate it."
+      },
+      "refactorings": {
+        "file": "src/generated/schema.json",
+        "suggestions": [],
+        "summary": "Generated files are consistent with the established pattern. No refactoring opportunities."
+      }
+    },
+    {
+      "file": "src/generated/schema.ts",
+      "codeQuality": {
+        "file": "src/generated/schema.ts",
+        "issues": [],
+        "overallScore": 100,
+        "summary": "Generated TypeScript schema file using Zod. The new 'tools' field follows the exact same pattern as other permissions (camera, microphone, geolocation, clipboardWrite). Proper use of optional fields and descriptive comments. Code is well-formatted and consistent."
+      },
+      "testCoverage": {
+        "file": "src/generated/schema.ts",
+        "hasTests": false,
+        "testFiles": [],
+        "untestedPaths": [
+          {
+            "type": "function",
+            "location": "McpUiResourcePermissionsSchema.tools (lines 344-348)",
+            "priority": "low",
+            "reasoning": "This is a generated Zod schema. While not directly tested, it's used implicitly in the system for validation. Consider adding explicit schema validation tests.",
+            "suggestedTest": "Add schema validation test: verify that McpUiResourcePermissionsSchema.parse({ tools: {} }) succeeds and McpUiResourcePermissionsSchema.parse({ tools: 'invalid' }) throws appropriate error."
+          }
+        ],
+        "coverageEstimate": 85,
+        "summary": "This is a generated Zod schema file that provides runtime validation for the tools permission. As a generated file, it's typically not directly tested, but the schema is used throughout the system. Integration tests implicitly validate the schema."
+      },
+      "refactorings": {
+        "file": "src/generated/schema.ts",
+        "suggestions": [],
+        "summary": "Generated files and type definitions are consistent with the established pattern. No refactoring opportunities."
+      }
+    },
+    {
+      "file": "src/spec.types.ts",
+      "codeQuality": {
+        "file": "src/spec.types.ts",
+        "issues": [],
+        "overallScore": 100,
+        "summary": "Type definition file with clean additions. The new 'tools' property is properly typed as an optional empty object, matching the pattern of existing permissions. JSDoc comments are present and accurate. The type definition aligns with the specification documentation."
+      },
+      "testCoverage": {
+        "file": "src/spec.types.ts",
+        "hasTests": false,
+        "testFiles": [],
+        "untestedPaths": [
+          {
+            "type": "class",
+            "location": "McpUiResourcePermissions.tools property (lines 689-695)",
+            "priority": "low",
+            "reasoning": "Type definitions typically don't require runtime tests, but integration tests should verify that the TypeScript type correctly accepts and rejects appropriate values.",
+            "suggestedTest": "Add type-level tests or integration tests that verify the tools property is correctly typed as optional empty object and integrates with the rest of the permission system."
+          }
+        ],
+        "coverageEstimate": 90,
+        "summary": "This is a TypeScript type definition file. The tools property is added to the McpUiResourcePermissions interface. Type definitions are validated at compile-time, and the generated schema files provide runtime validation. Coverage estimate is high because TypeScript compilation provides validation."
+      },
+      "refactorings": {
+        "file": "src/spec.types.ts",
+        "suggestions": [],
+        "summary": "The generated files and type definitions are consistent with the established pattern. No refactoring opportunities identified."
+      }
+    }
+  ],
+  "summary": {
+    "totalFiles": 6,
+    "overallScore": 97.83,
+    "criticalIssues": 0,
+    "highPriorityTests": 1,
+    "refactoringOpportunities": 2
+  },
+  "recommendations": [
+    {
+      "priority": "high",
+      "category": "Test Coverage",
+      "description": "Add explicit negative test case to verify that buildAllowAttribute works correctly when tools permission is NOT included in the permissions object. This ensures the conditional logic is correctly implemented and prevents regressions.",
+      "files": [
+        "src/app-bridge.test.ts"
+      ]
+    },
+    {
+      "priority": "high",
+      "category": "Code Maintainability",
+      "description": "Refactor buildAllowAttribute function to use a declarative permission policy mapping table instead of repetitive if-statements. This will significantly improve maintainability as more permissions are added in the future and centralize the TypeScript-to-Policy-name mapping.",
+      "files": [
+        "src/app-bridge.ts"
+      ]
+    },
+    {
+      "priority": "medium",
+      "category": "Test Coverage",
+      "description": "Add edge case tests for falsy values (undefined, null) to ensure the tools permission conditional check is robust against unexpected runtime values that might bypass TypeScript validation.",
+      "files": [
+        "src/app-bridge.test.ts"
+      ]
+    },
+    {
+      "priority": "medium",
+      "category": "Test Coverage",
+      "description": "Add tests for various permission subset combinations (e.g., tools + camera, tools + microphone + geolocation) to ensure tools integrates correctly with different permission combinations, not just all-or-nothing scenarios.",
+      "files": [
+        "src/app-bridge.test.ts"
+      ]
+    },
+    {
+      "priority": "low",
+      "category": "Test Robustness",
+      "description": "Consider making the multi-permission test less brittle by testing for the presence of expected permissions rather than exact string equality, or explicitly document that permission ordering is part of the API contract.",
+      "files": [
+        "src/app-bridge.test.ts"
+      ]
+    },
+    {
+      "priority": "low",
+      "category": "Schema Validation",
+      "description": "Add explicit schema validation tests for the McpUiResourcePermissionsSchema to verify that the Zod schema correctly validates and rejects invalid tool permission values.",
+      "files": [
+        "src/generated/schema.ts",
+        "src/app-bridge.test.ts"
+      ]
+    }
+  ],
+  "metadata": {
+    "analyzedAt": "2026-09-27T00:00:00Z",
+    "duration": 175176,
+    "agentVersions": {
+      "code-quality-analyzer": "ab0c03c",
+      "test-coverage-analyzer": "aebda7d",
+      "refactoring-suggester": "adfebf5"
+    }
+  }
+}
