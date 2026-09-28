@@ -35,8 +35,13 @@ function validateArguments(
 }
 
 function validateAuthentication(): void {
-  const hasAnthropicAuth = Boolean(process.env.ANTHROPIC_API_KEY);
+  if (!process.env.GITHUB_TOKEN) {
+    throw new Error(
+      'GITHUB_TOKEN is required. Create a GitHub personal access token with repo/read access and add it to your .env file.'
+    );
+  }
 
+  const hasAnthropicAuth = Boolean(process.env.ANTHROPIC_API_KEY);
   const hasAwsAuth =
     Boolean(process.env.AWS_ACCESS_KEY_ID) &&
     Boolean(process.env.AWS_SECRET_ACCESS_KEY);
@@ -52,7 +57,7 @@ function validateAuthentication(): void {
     return;
   }
 
-  if (!process.env.AWS_REGION) {
+  if (hasAwsAuth && !process.env.AWS_REGION) {
     throw new Error(
       'AWS authentication is configured, but AWS_REGION is missing.'
     );
@@ -83,7 +88,6 @@ async function saveReports(
 
   await mkdir(reportsDirectory, { recursive: true });
 
-  const baseName = `${owner}-${repo}-pr-${prNumber}`;
   const reportGenerator = new ReportGenerator();
 
   const markdown = reportGenerator.generateMarkdownReport(report);
@@ -92,26 +96,26 @@ async function saveReports(
 
   await Promise.all([
     writeFile(
-      path.join(reportsDirectory, `${baseName}.md`),
+      path.join(reportsDirectory, 'report.md'),
       markdown,
       'utf8'
     ),
     writeFile(
-      path.join(reportsDirectory, `${baseName}.html`),
+      path.join(reportsDirectory, 'report.html'),
       html,
       'utf8'
     ),
     writeFile(
-      path.join(reportsDirectory, `${baseName}.json`),
+      path.join(reportsDirectory, 'report.json'),
       json,
       'utf8'
     ),
   ]);
 
   console.log(`📄 Reports written to: ${reportsDirectory}`);
-  console.log(`   ${baseName}.json`);
-  console.log(`   ${baseName}.md`);
-  console.log(`   ${baseName}.html`);
+  console.log('   report.json');
+  console.log('   report.md');
+  console.log('   report.html');
 }
 
 async function main(): Promise<void> {

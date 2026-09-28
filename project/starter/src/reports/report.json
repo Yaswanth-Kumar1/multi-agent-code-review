@@ -1,0 +1,491 @@
+{
+  "pullRequest": {
+    "owner": "modelcontextprotocol",
+    "repo": "modelcontextprotocol-ext-apps",
+    "number": 691
+  },
+  "fileReviews": [
+    {
+      "file": "src/app-bridge.ts",
+      "codeQuality": {
+        "file": "src/app-bridge.ts",
+        "issues": [
+          {
+            "line": 197,
+            "severity": "low",
+            "category": "maintainability",
+            "description": "The new permission check follows the existing pattern but lacks alphabetical ordering. The list appears to be ordered by permission type rather than alphabetically, which could lead to inconsistencies.",
+            "suggestion": "Consider either maintaining strict alphabetical ordering or documenting the ordering convention in a comment above the function."
+          },
+          {
+            "line": 194,
+            "severity": "info",
+            "category": "best-practice",
+            "description": "The buildAllowAttribute function uses multiple if-statements to build the allowList array. While readable, this approach requires adding a new if-statement for each permission type.",
+            "suggestion": "Consider a more scalable approach using a permission mapping object to reduce code duplication and improve maintainability."
+          },
+          {
+            "line": 197,
+            "severity": "medium",
+            "category": "security",
+            "description": "The implementation grants tools permission through an empty object {}. There's no validation of what tools can be registered or what actions they can perform.",
+            "suggestion": "Consider implementing additional security measures: tool capability scoping, tool name validation/allowlisting, runtime permission prompts for sensitive tool operations, and documentation on security best practices."
+          },
+          {
+            "line": 194,
+            "severity": "low",
+            "category": "security",
+            "description": "The code doesn't validate that the host actually supports the tools permission before attempting to use it.",
+            "suggestion": "Add runtime validation in the app bridge to check if the host declares tools support in its capabilities before granting the permission."
+          }
+        ],
+        "overallScore": 85,
+        "summary": "The implementation correctly follows the existing pattern. The code is simple, readable, and consistent with other permission checks. Minor improvements could be made for maintainability and scalability. Main concerns are around security validation and the scalability of the if-statement pattern."
+      },
+      "testCoverage": {
+        "file": "src/app-bridge.ts",
+        "hasTests": true,
+        "testFiles": [
+          "src/app-bridge.test.ts"
+        ],
+        "untestedPaths": [
+          {
+            "type": "edge-case",
+            "location": "buildAllowAttribute function, line 197 (tools permission)",
+            "priority": "high",
+            "reasoning": "No test validates behavior when tools permission is an empty object {} versus undefined versus other falsy values. The current implementation uses truthy checking which may behave unexpectedly with edge cases.",
+            "suggestedTest": "Add tests for tools as undefined, null, missing property, and non-empty object to verify correct handling of all edge cases."
+          },
+          {
+            "type": "edge-case",
+            "location": "buildAllowAttribute function with tools in various positions",
+            "priority": "medium",
+            "reasoning": "No test validates that tools maintains correct ordering when combined with different permission subsets. Current test only validates all permissions together.",
+            "suggestedTest": "Add tests for tools combined with different subsets of permissions (e.g., tools + camera, tools + geolocation) to ensure ordering is consistent."
+          },
+          {
+            "type": "branch",
+            "location": "Integration with iframe allow attribute",
+            "priority": "critical",
+            "reasoning": "No test validates that the tools permission actually flows through to iframe creation and sets the correct allow attribute on the iframe element. This is the primary use case mentioned in the PR description.",
+            "suggestedTest": "Add integration tests that verify the allow='tools' attribute is correctly set on iframe elements when tools permission is requested."
+          },
+          {
+            "type": "function",
+            "location": "Permission validation and sanitization",
+            "priority": "medium",
+            "reasoning": "No test validates that invalid or malicious values in the tools permission object are handled safely.",
+            "suggestedTest": "Add defensive tests for nested objects, special characters in properties, and injection attempts through the tools object."
+          }
+        ],
+        "coverageEstimate": 65,
+        "summary": "The implementation adds tools permission support following the established pattern. Basic positive tests exist (single permission, multi-permission). However, critical gaps exist in edge case handling, input validation, iframe integration testing, and ordering verification. The happy path is tested, but error conditions and integration scenarios are not adequately covered."
+      },
+      "refactorings": {
+        "file": "src/app-bridge.ts",
+        "suggestions": [
+          {
+            "type": "simplify",
+            "location": "buildAllowAttribute function (lines 193-198)",
+            "impact": "high",
+            "description": "The current implementation uses five sequential if-statements to check each permission. This pattern creates high maintenance overhead as each new permission requires adding another if-statement.",
+            "before": "if (permissions.camera) allowList.push(\"camera\");\nif (permissions.microphone) allowList.push(\"microphone\");\nif (permissions.geolocation) allowList.push(\"geolocation\");\nif (permissions.clipboardWrite) allowList.push(\"clipboard-write\");\nif (permissions.tools) allowList.push(\"tools\");",
+            "after": "const PERMISSION_MAPPINGS = {\n  camera: \"camera\",\n  microphone: \"microphone\",\n  geolocation: \"geolocation\",\n  clipboardWrite: \"clipboard-write\",\n  tools: \"tools\"\n};\n\nreturn Object.entries(PERMISSION_MAPPINGS)\n  .filter(([key]) => permissions[key])\n  .map(([, value]) => value)\n  .join(\"; \");",
+            "benefits": "Eliminates code duplication, reduces cyclomatic complexity from 5 to 1, makes permission-to-attribute mapping explicit and centralized, adding new permissions only requires updating the mapping object, more maintainable and less error-prone."
+          },
+          {
+            "type": "extract-function",
+            "location": "src/app-bridge.ts, permission mapping logic",
+            "impact": "medium",
+            "description": "The mapping between TypeScript permission names (camelCase) and Permission Policy feature names (kebab-case) is implicit in the code. Extracting this as a separate configuration makes the transformation explicit.",
+            "before": "if (permissions.clipboardWrite) allowList.push(\"clipboard-write\");",
+            "after": "const PERMISSION_TO_POLICY_FEATURE = Object.freeze({\n  camera: \"camera\",\n  microphone: \"microphone\",\n  geolocation: \"geolocation\",\n  clipboardWrite: \"clipboard-write\",\n  tools: \"tools\"\n});\n\nreturn enabledPermissions\n  .map(key => PERMISSION_TO_POLICY_FEATURE[key])\n  .join(\"; \");",
+            "benefits": "Clear separation between configuration and logic, self-documenting code with explicit mapping, frozen object prevents accidental mutations, easier to validate and test the mapping, central location for all permission mappings."
+          },
+          {
+            "type": "pattern-improvement",
+            "location": "src/app-bridge.ts, buildAllowAttribute function",
+            "impact": "medium",
+            "description": "Currently, the function assumes all permissions are properly typed. Adding runtime validation improves robustness, especially when dealing with external data or generated schemas.",
+            "before": "export function buildAllowAttribute(permissions: McpUiResourcePermissions): string {\n  const allowList: string[] = [];\n  if (permissions.camera) allowList.push(\"camera\");\n  // ...\n}",
+            "after": "function isValidPermission(key: string): key is ValidPermission {\n  return VALID_PERMISSIONS.includes(key);\n}\n\nexport function buildAllowAttribute(permissions: McpUiResourcePermissions): string {\n  return Object.keys(permissions)\n    .filter(isValidPermission)\n    .filter(key => permissions[key])\n    .map(key => PERMISSION_MAPPINGS[key])\n    .join(\"; \");\n}",
+            "benefits": "Runtime type safety for permission keys, prevents issues with malformed permission objects, better error handling and debugging, self-documenting valid permissions, compatible with TypeScript's type narrowing."
+          }
+        ],
+        "summary": "The PR follows an existing repetitive pattern of adding permissions. The main refactoring opportunity is to eliminate repetitive conditional logic by introducing a data-driven approach with a permission mapping configuration. The current pattern doesn't scale well (already at 5 permissions) and requires identical boilerplate code for each new permission."
+      }
+    },
+    {
+      "file": "src/app-bridge.test.ts",
+      "codeQuality": {
+        "file": "src/app-bridge.test.ts",
+        "issues": [
+          {
+            "line": 2821,
+            "severity": "info",
+            "category": "best-practice",
+            "description": "The new test case is well-structured and follows the existing test pattern. However, it only tests the isolated case.",
+            "suggestion": "Consider adding a test case that combines tools with one other permission (not just all permissions) to ensure correct ordering."
+          },
+          {
+            "line": 2841,
+            "severity": "low",
+            "category": "maintainability",
+            "description": "The test assertion string is manually maintained and must be updated each time a permission is added. This is fragile and error-prone.",
+            "suggestion": "Consider building the expected string programmatically or splitting into individual assertions using toContain() to make test maintenance easier."
+          },
+          {
+            "line": 2820,
+            "severity": "low",
+            "category": "bug-risk",
+            "description": "No test verifies that the tools permission is correctly ignored when not set or when set to undefined/null.",
+            "suggestion": "Add edge case tests for tools set to undefined, null, or missing from the permissions object entirely."
+          }
+        ],
+        "overallScore": 88,
+        "summary": "Test coverage is adequate and follows existing patterns. The new test case properly validates the tools permission. Minor improvements in edge case coverage and test maintainability would strengthen the test suite."
+      },
+      "testCoverage": {
+        "file": "src/app-bridge.test.ts",
+        "hasTests": true,
+        "testFiles": [
+          "src/app-bridge.test.ts"
+        ],
+        "untestedPaths": [
+          {
+            "type": "edge-case",
+            "location": "Test for tools permission edge cases",
+            "priority": "high",
+            "reasoning": "Tests only cover the happy path (tools: {}). Missing tests for undefined, null, and other falsy values.",
+            "suggestedTest": "Add test cases: 'should handle tools as undefined', 'should handle tools as null', 'should handle missing tools property'."
+          }
+        ],
+        "coverageEstimate": 70,
+        "summary": "Tests exist for the basic functionality but lack edge case coverage. The test file properly extends existing test patterns but could benefit from more comprehensive edge case testing."
+      },
+      "refactorings": {
+        "file": "src/app-bridge.test.ts",
+        "suggestions": [
+          {
+            "type": "modernize",
+            "location": "Multi-permission test assertion (line 2841)",
+            "impact": "low",
+            "description": "The test uses a hardcoded string comparison which is brittle when permissions are added or reordered.",
+            "before": "expect(buildAllowAttribute({...})).toBe(\"camera; microphone; geolocation; clipboard-write; tools\");",
+            "after": "const result = buildAllowAttribute({...});\nexpect(result).toContain(\"camera\");\nexpect(result).toContain(\"tools\");\nexpect(result.split(\"; \")).toHaveLength(5);",
+            "benefits": "More resilient to permission ordering changes, clearer test intent, easier to maintain when adding new permissions."
+          }
+        ],
+        "summary": "Tests follow existing patterns well. Minor refactoring opportunities exist to make tests more maintainable and resilient to changes."
+      }
+    },
+    {
+      "file": "src/spec.types.ts",
+      "codeQuality": {
+        "file": "src/spec.types.ts",
+        "issues": [
+          {
+            "line": 694,
+            "severity": "low",
+            "category": "style",
+            "description": "The type definition uses {} for the tools property, which is consistent with other permissions but could be more explicit about being an empty object or marker type.",
+            "suggestion": "Consider using a more explicit type definition for clarity: Record<string, never>, object, or a named EmptyObject type alias."
+          },
+          {
+            "line": 689,
+            "severity": "info",
+            "category": "maintainability",
+            "description": "The JSDoc comment is concise but could benefit from additional context about when/why this permission is needed.",
+            "suggestion": "Enhance documentation with additional context about WebMCP tools registration, link to specification (https://webmachinelearning.github.io/webmcp/#permissions-policy), and usage examples."
+          }
+        ],
+        "overallScore": 90,
+        "summary": "Type definition is correct and consistent with the existing codebase. Documentation is adequate but could be enhanced with additional context and links to the WebMCP specification."
+      },
+      "testCoverage": {
+        "file": "src/spec.types.ts",
+        "hasTests": false,
+        "testFiles": [],
+        "untestedPaths": [
+          {
+            "type": "class",
+            "location": "McpUiResourcePermissions interface with tools property",
+            "priority": "medium",
+            "reasoning": "TypeScript interfaces don't have runtime behavior, but integration tests should verify the type definitions work correctly with actual usage patterns.",
+            "suggestedTest": "Add integration tests to verify the tools property works correctly in type inference and with actual usage patterns."
+          }
+        ],
+        "coverageEstimate": 0,
+        "summary": "Type definitions have no explicit test coverage. While TypeScript provides compile-time checking, runtime integration tests would increase confidence that the types match actual usage."
+      },
+      "refactorings": {
+        "file": "src/spec.types.ts",
+        "suggestions": [
+          {
+            "type": "modernize",
+            "location": "tools property type definition (line 694)",
+            "impact": "low",
+            "description": "The empty object type {} is implicit and could be more explicit about its intent as a marker type.",
+            "before": "tools?: {};",
+            "after": "tools?: Record<string, never>;",
+            "benefits": "More explicit about the intent that this is an empty object marker, better type safety, clearer code intent."
+          }
+        ],
+        "summary": "Type definitions are well-structured. Minor modernization opportunity to make the empty object type more explicit."
+      }
+    },
+    {
+      "file": "src/generated/schema.ts",
+      "codeQuality": {
+        "file": "src/generated/schema.ts",
+        "issues": [
+          {
+            "line": 344,
+            "severity": "info",
+            "category": "maintainability",
+            "description": "This is a generated file. Any issues here should be fixed in the source schema, not in this file directly.",
+            "suggestion": "Ensure the generation process is documented and the source schema is properly maintained."
+          },
+          {
+            "line": 344,
+            "severity": "low",
+            "category": "best-practice",
+            "description": "The Zod schema uses .object({}) which accepts any object, even with additional properties. While this matches other permissions, it's not the strictest validation.",
+            "suggestion": "Consider using .object({}).strict() to reject additional properties if no future extensibility is planned, or document the intentional flexibility."
+          }
+        ],
+        "overallScore": 92,
+        "summary": "Generated schema code is well-formed and consistent with existing patterns. As a generated file, the main concern is ensuring the generation process is correct and maintainable."
+      },
+      "testCoverage": {
+        "file": "src/generated/schema.ts",
+        "hasTests": false,
+        "testFiles": [],
+        "untestedPaths": [
+          {
+            "type": "class",
+            "location": "McpUiResourcePermissionsSchema with tools field",
+            "priority": "high",
+            "reasoning": "Generated schemas should have validation tests to ensure the tools field correctly validates against expected inputs and rejects invalid ones.",
+            "suggestedTest": "Add schema validation tests: validate tools as empty object, allow tools to be optional, reject tools with additional properties, validate complete permissions object including tools."
+          }
+        ],
+        "coverageEstimate": 0,
+        "summary": "Generated schema files have no test coverage for the new tools field. Schema validation is critical for ensuring type safety and should be tested, especially since this is part of the public API."
+      },
+      "refactorings": {
+        "file": "src/generated/schema.ts",
+        "suggestions": [
+          {
+            "type": "pattern-improvement",
+            "location": "tools schema definition (line 344)",
+            "impact": "low",
+            "description": "The schema uses .object({}) which is permissive. Adding .strict() would provide stronger validation.",
+            "before": "tools: z.object({}).optional().describe(...)",
+            "after": "tools: z.object({}).strict().optional().describe(...)",
+            "benefits": "Stricter validation, prevents additional properties, better runtime type safety, matches the JSON schema's additionalProperties: false."
+          }
+        ],
+        "summary": "Generated schema is well-formed. Minor improvement opportunity to add strict validation to match the JSON schema's additionalProperties: false setting."
+      }
+    },
+    {
+      "file": "src/generated/schema.json",
+      "codeQuality": {
+        "file": "src/generated/schema.json",
+        "issues": [
+          {
+            "line": 1,
+            "severity": "info",
+            "category": "best-practice",
+            "description": "The schema definition uses 'additionalProperties': false which is stricter than the Zod schema's .object({}). This is actually good for validation but creates a slight inconsistency.",
+            "suggestion": "Ensure the TypeScript Zod schema and JSON schema have the same validation semantics. The JSON schema is correct here with additionalProperties: false."
+          },
+          {
+            "line": 1,
+            "severity": "info",
+            "category": "maintainability",
+            "description": "This is a generated file that appears in 5 different locations within the schema structure, suggesting it's used in multiple contexts (permissions, capabilities, etc.).",
+            "suggestion": "Verify that all 5 locations are intentional and correctly represent where tools permissions should be allowed in the specification."
+          }
+        ],
+        "overallScore": 93,
+        "summary": "JSON schema is well-formed and uses appropriate validation rules with additionalProperties: false. The duplication across multiple schema locations appears intentional for different contexts."
+      },
+      "testCoverage": {
+        "file": "src/generated/schema.json",
+        "hasTests": false,
+        "testFiles": [],
+        "untestedPaths": [
+          {
+            "type": "edge-case",
+            "location": "JSON schema validation for tools field",
+            "priority": "medium",
+            "reasoning": "JSON schema should be validated to ensure it correctly accepts and rejects appropriate inputs.",
+            "suggestedTest": "Add JSON schema validation tests using a JSON schema validator library to ensure the schema definition is correct."
+          }
+        ],
+        "coverageEstimate": 0,
+        "summary": "JSON schema has no automated validation tests. Schema testing would ensure the definitions are correct and match the intended validation rules."
+      },
+      "refactorings": {
+        "file": "src/generated/schema.json",
+        "suggestions": [],
+        "summary": "No refactoring opportunities identified for generated JSON schema file. The schema is well-formed and consistent."
+      }
+    },
+    {
+      "file": "specification/draft/apps.mdx",
+      "codeQuality": {
+        "file": "specification/draft/apps.mdx",
+        "issues": [
+          {
+            "line": 196,
+            "severity": "low",
+            "category": "maintainability",
+            "description": "The documentation correctly adds the tools permission to all relevant locations (4 locations total), but lacks examples or detailed explanation of what 'WebMCP tools access' means for app developers.",
+            "suggestion": "Add a dedicated section explaining the tools permission with examples of registering custom tools, defining tool schemas, and controlling tool exposure to specific origins."
+          },
+          {
+            "line": 199,
+            "severity": "info",
+            "category": "maintainability",
+            "description": "The documentation mentions 'Maps to Permission Policy tools feature' but doesn't provide a hyperlink to the WebMCP specification.",
+            "suggestion": "Add hyperlinks to related documentation: https://webmachinelearning.github.io/webmcp/#permissions-policy"
+          }
+        ],
+        "overallScore": 87,
+        "summary": "Documentation updates are consistent across all relevant sections. The addition is clear but could benefit from more detailed explanation and examples for developers implementing this feature."
+      },
+      "testCoverage": {
+        "file": "specification/draft/apps.mdx",
+        "hasTests": false,
+        "testFiles": [],
+        "untestedPaths": [
+          {
+            "type": "edge-case",
+            "location": "Documentation examples and code samples",
+            "priority": "low",
+            "reasoning": "Documentation changes should ideally have example validation tests to ensure code samples remain accurate and executable.",
+            "suggestedTest": "Add documentation example validation tests to ensure code samples work correctly and don't drift from actual implementation."
+          }
+        ],
+        "coverageEstimate": 0,
+        "summary": "Documentation has no automated testing. While lower priority, documentation examples should be validated to prevent drift from actual implementation."
+      },
+      "refactorings": {
+        "file": "specification/draft/apps.mdx",
+        "suggestions": [
+          {
+            "type": "modernize",
+            "location": "Documentation structure for permissions",
+            "impact": "low",
+            "description": "The documentation could benefit from a dedicated section explaining the tools permission with usage examples.",
+            "before": "/**\n * Request WebMCP tools access\n *\n * Maps to Permission Policy `tools` feature\n */\ntools?: {},",
+            "after": "#### Tools Permission\n\nThe `tools` permission grants the app access to the WebMCP tools API, enabling it to:\n- Register custom tools that can be invoked by AI models\n- Define tool schemas and execution handlers\n- Control tool exposure to specific origins\n\nExample:\n```typescript\nconst permissions = {\n  tools: {} // Enable WebMCP tools API access\n};\n```\n\n/**\n * Request WebMCP tools access\n * Maps to Permission Policy `tools` feature\n * @see https://webmachinelearning.github.io/webmcp/#permissions-policy\n */\ntools?: {},",
+            "benefits": "Better developer experience, clearer documentation, provides context and examples, includes specification links."
+          }
+        ],
+        "summary": "Documentation is comprehensive but could benefit from enhanced examples and structure to improve developer understanding."
+      }
+    }
+  ],
+  "summary": {
+    "totalFiles": 6,
+    "overallScore": 89,
+    "criticalIssues": 1,
+    "highPriorityTests": 3,
+    "refactoringOpportunities": 7
+  },
+  "recommendations": [
+    {
+      "priority": "critical",
+      "category": "Testing",
+      "description": "Add iframe integration tests to validate that the tools permission correctly flows through to iframe creation and sets the allow='tools' attribute. This is the primary use case mentioned in the PR description.",
+      "files": [
+        "src/app-bridge.test.ts"
+      ]
+    },
+    {
+      "priority": "high",
+      "category": "Security",
+      "description": "Add security documentation explaining the security implications of granting tools permission and best practices for tool registration. The permission grants broad capabilities without fine-grained controls.",
+      "files": [
+        "specification/draft/apps.mdx"
+      ]
+    },
+    {
+      "priority": "high",
+      "category": "Testing",
+      "description": "Add edge case tests for the tools permission including undefined, null, missing properties, and various permission combinations to ensure robust handling of all scenarios.",
+      "files": [
+        "src/app-bridge.test.ts"
+      ]
+    },
+    {
+      "priority": "high",
+      "category": "Testing",
+      "description": "Add schema validation tests for the generated Zod schema to ensure the tools field correctly validates expected inputs and rejects invalid ones.",
+      "files": [
+        "src/generated/schema.ts"
+      ]
+    },
+    {
+      "priority": "high",
+      "category": "Refactoring",
+      "description": "Replace repetitive if-statement pattern with a data-driven approach using a permission mapping object. This will significantly improve maintainability and reduce code duplication.",
+      "files": [
+        "src/app-bridge.ts"
+      ]
+    },
+    {
+      "priority": "medium",
+      "category": "Documentation",
+      "description": "Enhance user-facing documentation with detailed examples, use cases, and links to the WebMCP specification for the tools permission.",
+      "files": [
+        "specification/draft/apps.mdx"
+      ]
+    },
+    {
+      "priority": "medium",
+      "category": "Security",
+      "description": "Add runtime validation to check host capabilities before granting permissions. Ensure the host actually supports the tools permission.",
+      "files": [
+        "src/app-bridge.ts"
+      ]
+    },
+    {
+      "priority": "medium",
+      "category": "Testing",
+      "description": "Add input validation tests for malicious or unexpected inputs to ensure defensive programming practices.",
+      "files": [
+        "src/app-bridge.test.ts"
+      ]
+    },
+    {
+      "priority": "low",
+      "category": "Code Quality",
+      "description": "Consider using more explicit type definitions (Record<string, never>) instead of {} for the tools permission type.",
+      "files": [
+        "src/spec.types.ts"
+      ]
+    },
+    {
+      "priority": "low",
+      "category": "Consistency",
+      "description": "Ensure Zod schema and JSON schema have matching validation semantics. Consider adding .strict() to Zod schema to match JSON schema's additionalProperties: false.",
+      "files": [
+        "src/generated/schema.ts"
+      ]
+    }
+  ],
+  "metadata": {
+    "analyzedAt": "2026-09-28T00:00:00Z",
+    "duration": 334725,
+    "agentVersions": {
+      "code-quality-analyzer": "a709bfc",
+      "test-coverage-analyzer": "a4b4ee8",
+      "refactoring-suggester": "aabb390"
+    }
+  }
+}
